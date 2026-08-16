@@ -136,7 +136,7 @@ bot.on('callback_query', async (query) => {
     const currentRate = rates[type];
     userState[chatId] = { action: 'submitting_gmail', type: type };
 
-    bot.sendMessage(chatId, `📧 **${type.toUpperCase()} Gmail Submitting**\n💰 বর্তমান রেট: ${currentRate} টাকা\n⚠️ **রুলস:** জিমেইল চেক করার জন্য ২৪ ঘণ্টা সময় লাগবে।\n\nনিচের ফরম্যাটে জিমেইল ও পাসওয়ার্ড লিখে পাঠান:\n` + "`email@gmail.com pass123`", { parse_mode: 'Markdown' });
+    bot.sendMessage(chatId, `📧 **${type.toUpperCase()} Gmail Submitting**\n💰 বর্তমান রেট: ${currentRate} টাকা\n⚠️ **রুলস:** জিমেইল চেক করার জন্য ২৪ ঘণ্টা সময় লাগবে।\n জিমেইল সাবমিট দেওয়ার আগে অবশ্যই ফোন থেকে রিমুভ করে তারপরে সাবমিট করবেন\n\nনিচের ফরম্যাটে জিমেইল ও পাসওয়ার্ড লিখে পাঠান:\n` + "`email@gmail.com pass123`", { parse_mode: 'Markdown' });
   }
 
   if (data === "withdraw_menu") {

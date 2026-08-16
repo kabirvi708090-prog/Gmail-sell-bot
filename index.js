@@ -8,15 +8,15 @@ app.get('/', (req, res) => res.send('Bot is active!'));
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
 // Bot Config
-const token = "8821189599:AAHSL8MZG3J3m__K4HFAP8EYvMd-xF91CrM"; // ⚠️ কোটেশনের (string) ভেতরে রাখতে হবে
+const token = "8821189599:AAHSL8MZG3J3m__K4HFAP8EYvMd-xF91CrM";
 const bot = new TelegramBot(token, { polling: true });
 
 // Configuration & Data Storage
 const OWNER_ID = 8864523429; 
 let admins = []; 
-let rates = { old: 20, new: 15 }; // রেট সংখ্যায় রাখা হয়েছে হিসাবের সুবিধার্থে
+let rates = { old: 20, new: 15 };
 const userState = {}; 
-const userBalances = {}; // ইউজার ব্যালেন্স জমা রাখার জন্য
+const userBalances = {};
 
 // বাধ্যতামুলক চ্যানেলসমূহ
 const CHANNELS = [
@@ -45,7 +45,7 @@ function sendJoinMessage(chatId) {
   });
 }
 
-// মেইন মেনু (ব্যালেন্স বাটন সহ)
+// মেইন মেনু
 function sendMainMenu(chatId) {
   const balance = userBalances[chatId] || 0;
   const options = {
@@ -53,14 +53,14 @@ function sendMainMenu(chatId) {
       inline_keyboard: [
         [{ text: "📧 Gmail Account Sell", callback_data: "sell_menu" }],
         [{ text: `💰 Balance: ${balance} Tk`, callback_data: "my_balance" }, { text: "💳 Withdraw", callback_data: "withdraw_menu" }],
-        [{ text: "👨‍💻 Admin Support", url: "https://t.me/Fahimvii" }]
+        [{ text: "👨‍💻 Admin Support", url: "https://t.me/skfreetaka" }]
       ]
     }
   };
   bot.sendMessage(chatId, "আপনার কাঙ্ক্ষিত অপশনটি বেছে নিন:", options);
 }
 
-// ওনার ও এডমিনদের কাছে মেসেজ পাঠানোর ফাংশন (Inline Approve/Reject Button সহ)
+// এডমিন নোটিফিকেশন
 function notifyAdminsWithMarkup(messageText, replyMarkup) {
   bot.sendMessage(OWNER_ID, messageText, { parse_mode: 'Markdown', reply_markup: replyMarkup });
   admins.forEach(adminId => {
@@ -123,7 +123,7 @@ bot.on('callback_query', async (query) => {
     bot.sendMessage(chatId, "কোন ধরণের জিমেইল বিক্রি করতে চান সিলেক্ট করুন:", {
       reply_markup: {
         inline_keyboard: [
-          [{ text: "📩 Old Gmail", callback_data: "submit_old" }],
+          [{ text: "📩 Old Gmail", callback_data: "select_old_2fa_status" }],
           [{ text: "📩 New Gmail", callback_data: "submit_new" }],
           [{ text: "🔙 Back", callback_data: "main_menu" }]
         ]
@@ -131,12 +131,47 @@ bot.on('callback_query', async (query) => {
     });
   }
 
-  if (data === "submit_old" || data === "submit_new") {
-    const type = data === "submit_old" ? "old" : "new";
-    const currentRate = rates[type];
-    userState[chatId] = { action: 'submitting_gmail', type: type };
+  // Old Gmail - 2FA Selection Step
+  if (data === "select_old_2fa_status") {
+    bot.sendMessage(chatId, "🔐 আপনার **Old Gmail** একাউন্টে কি 2-Step Verification (2FA) অন আছে?", {
+      parse_mode: 'Markdown',
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: "🔒 2FA ON (2-Step Verification)", callback_data: "submit_old_2fa_on" }],
+          [{ text: "🔓 2FA OFF (Normal)", callback_data: "submit_old_2fa_off" }],
+          [{ text: "🔙 Back", callback_data: "sell_menu" }]
+        ]
+      }
+    });
+  }
 
-    bot.sendMessage(chatId, `📧 **${type.toUpperCase()} Gmail Submitting**\n💰 বর্তমান রেট: ${currentRate} টাকা\n⚠️ **রুলস:** জিমেইল চেক করার জন্য ২৪ ঘণ্টা সময় লাগবে।\n জিমেইল সাবমিট দেওয়ার আগে অবশ্যই ফোন থেকে রিমুভ করে তারপরে সাবমিট করবেন\n\nনিচের ফরম্যাটে জিমেইল ও পাসওয়ার্ড লিখে পাঠান:\n` + "`email@gmail.com pass123`", { parse_mode: 'Markdown' });
+  // Processing 2FA ON or OFF selection
+  if (data === "submit_old_2fa_on" || data === "submit_old_2fa_off" || data === "submit_new") {
+    let type = "new";
+    let is2FA = false;
+
+    if (data === "submit_old_2fa_on") {
+      type = "old";
+      is2FA = true;
+    } else if (data === "submit_old_2fa_off") {
+      type = "old";
+      is2FA = false;
+    }
+
+    const currentRate = rates[type];
+    userState[chatId] = { action: 'submitting_gmail', type: type, is2FA: is2FA };
+
+    let promptMessage = `📧 **${type.toUpperCase()} Gmail Submitting**\n💰 বর্তমান রেট: ${currentRate} টাকা\n⚠️ **রুলস:** জিমেইল চেক করার জন্য ২৪ ঘণ্টা সময় লাগবে।\nজিমেইল সাবমিট দেওয়ার আগে অবশ্যই ফোন থেকে রিমুভ করে নেবেন।\n\n`;
+
+    if (is2FA) {
+      promptMessage += `🔑 **2FA ON সিলেক্ট করেছেন।**\nনিচের ফরম্যাটে জিমেইল, পাসওয়ার্ড এবং ৮ ডিজিটের প্রেস কি (Backup Codes) লিখে পাঠান:\n\n` +
+                        `\`email@gmail.com pass123 code1, code2, code3\``;
+    } else {
+      promptMessage += `নিচের ফরম্যাটে জিমেইল ও পাসওয়ার্ড লিখে পাঠান:\n\n` +
+                        `\`email@gmail.com pass123\``;
+    }
+
+    bot.sendMessage(chatId, promptMessage, { parse_mode: 'Markdown' });
   }
 
   if (data === "withdraw_menu") {
@@ -154,7 +189,7 @@ bot.on('callback_query', async (query) => {
   if (data === "withdraw_bkash" || data === "withdraw_nagad") {
     const method = data === "withdraw_bkash" ? "Bkash" : "Nagad";
     userState[chatId] = { action: 'withdrawing', method: method };
-    bot.sendMessage(chatId, `📲 **${method} Withdraw**\n\nআপনার ${method} নম্বর এবং টাকার পরিমাণ লিখে পাঠান (যেমন: 01700000000 - 500 Tk):`);
+    bot.sendMessage(chatId, `📲 **${method} Withdraw**\n\nআপনার ${method} নম্বর এবং টাকার পরিমাণ লিখে পাঠান (যেমন: \`01700000000 - 500 Tk\`):`, { parse_mode: 'Markdown' });
   }
 
   if (data === "main_menu") {
@@ -162,7 +197,7 @@ bot.on('callback_query', async (query) => {
     sendMainMenu(chatId);
   }
 
-  // --- ⚙️ Admin Approve / Reject Actions ---
+  // Admin Approve / Reject Actions
   if (data.startsWith("app_") || data.startsWith("rej_")) {
     const action = data.split("_")[0];
     const type = data.split("_")[1];
@@ -170,19 +205,14 @@ bot.on('callback_query', async (query) => {
     const amount = rates[type] || 0;
 
     if (action === "app") {
-      // টাকা যোগ করা
       userBalances[targetUserId] = (userBalances[targetUserId] || 0) + amount;
-      
-      // ইউজারকে মেসেজ পাঠানো
       bot.sendMessage(targetUserId, `🎉 **অভিনন্দন!** আপনার জমা দেওয়া ${type.toUpperCase()} Gmail টি অ্যাপ্রুভ হয়েছে।\n💰 আপনার একাউন্টে **${amount} টাকা** যোগ করা হয়েছে।`);
       bot.sendMessage(chatId, `✅ ইউজার \`${targetUserId}\` এর জিমেইল Approve করা হয়েছে এবং ${amount} টাকা ওয়ালেটে যোগ হয়েছে।`, { parse_mode: 'Markdown' });
     } else if (action === "rej") {
-      // রিজেক্ট মেসেজ
       bot.sendMessage(targetUserId, `❌ **দুঃখিত!** আপনার জমা দেওয়া ${type.toUpperCase()} Gmail টি বাতিল (Reject) করা হয়েছে। তথ্য ভুল বা ইনভেলেড ছিল।`);
       bot.sendMessage(chatId, `❌ ইউজার \`${targetUserId}\` এর জিমেইল Reject করা হয়েছে।`, { parse_mode: 'Markdown' });
     }
 
-    // বাটনের মেসেজ আপডেট
     bot.editMessageReplyMarkup({ inline_keyboard: [] }, { chat_id: chatId, message_id: query.message.message_id });
   }
 
@@ -203,13 +233,30 @@ bot.on('message', (msg) => {
   if (state.action === 'submitting_gmail') {
     bot.sendMessage(chatId, "✅ আপনার জিমেইল সফলভাবে জমা হয়েছে! এডমিন চেক করে ২৪ ঘণ্টার মধ্যে আপডেট দেবে।");
 
+    // জিমেইল, পাসওয়ার্ড, ব্যাকআপ কোড আলাদা করে ট্যাপ-টু-কপি ফরম্যাটে সাজানো
+    const parts = text.trim().split(/\s+/);
+    let formattedData = "";
+
+    if (parts.length >= 2) {
+      const email = parts[0];
+      const password = parts[1];
+      const remaining = parts.slice(2).join(" ");
+
+      formattedData = `📧 **Email:** \`${email}\`\n🔑 **Password:** \`${password}\``;
+      if (remaining) {
+        formattedData += `\n📌 **2FA / Extra Info:** \`${remaining}\``;
+      }
+    } else {
+      formattedData = `📄 **Raw Data:** \`${text}\``;
+    }
+
     const adminMsg = `📩 **নতুন জিমেইল সাবমিশন!**\n\n` +
                      `👤 ইউজার: ${msg.from.first_name} (@${msg.from.username || 'N/A'})\n` +
                      `🆔 ইউজার ID: \`${chatId}\`\n` +
-                     `📌 টাইপ: ${state.type.toUpperCase()} Gmail\n` +
-                     `💰 সম্ভাব্য রেট: ${rates[state.type]} টাকা\n` +
-                     `📄 ডেটা:\n\`${text}\``;
-    
+                     `📌 টাইপ: ${state.type.toUpperCase()} Gmail${state.is2FA ? '(2FA Enabled)' : ''}\n` +
+                     `💰 সম্ভাব্য রেট: ${rates[state.type]} টাকা\n\n` +
+                     `👇 **কপি করতে লেখার ওপর টাচ করুন:**\n${formattedData}`;
+
     const adminMarkup = {
       inline_keyboard: [
         [

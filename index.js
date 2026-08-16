@@ -201,7 +201,7 @@ bot.on('callback_query', async (query) => {
     const currentRate = rates[type];
     userState[chatId] = { action: 'submitting_gmail', type: type, is2FA: is2FA };
 
-    let promptMessage = `📧 **${type.toUpperCase()} Gmail Submitting**\n💰 বর্তমান রেট: ${currentRate} টাকা\n⚠️ **রুলস:** জিমেইল চেক করার জন্য ২৪ ঘণ্টা সময় লাগবে।\nজিমেইল সাবমিট দেওয়ার আগে অবশ্যই ফোন থেকে রিমুভ করে নেবেন।\n\n`;
+    let promptMessage = `📧 **${type.toUpperCase()} Gmail Submitting**\n💰 বর্তমান রেট: ${currentRate} টাকা\n⚠️ **রুলস:** জিমেইল পাসওয়ার্ড এইটা দেওয়ার চেষ্টা করবেন aass1122\n\nজিমেইল চেক করার জন্য ২৪ ঘণ্টা সময় লাগবে।\nজিমেইল সাবমিট দেওয়ার আগে অবশ্যই ফোন থেকে রিমুভ করে দেবেন।\n\n`;
 
     if (is2FA) {
       promptMessage += `🔑 **2FA ON সিলেক্ট করেছেন।**\nনিচের ফরম্যাটে জিমেইল, পাসওয়ার্ড এবং ৮ ডিজিটের প্রেস কি (Backup Codes) লিখে পাঠান:\n\n` +

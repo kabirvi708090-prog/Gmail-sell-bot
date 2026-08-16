@@ -15,6 +15,7 @@ const bot = new TelegramBot(token, { polling: true });
 const OWNER_ID = 8864523429; 
 let admins = []; 
 let rates = { old: 20, new: 15 };
+const MIN_WITHDRAW = 50; // সর্বনিম্ন উইথড্র সীমানা ৫০ টাকা
 const userState = {}; 
 const userBalances = {};
 
@@ -81,7 +82,6 @@ bot.onText(/\/start/, async (msg) => {
 
 // ==================== ADMIN MANAGEMENT COMMANDS ====================
 
-// ১. নতুন এডমিন যুক্ত করা (সর্বোচ্চ ২ জন)
 bot.onText(/\/addadmin (\d+)/, (msg, match) => {
   if (msg.from.id !== OWNER_ID) return;
   const newAdminId = parseInt(match[1]);
@@ -92,7 +92,6 @@ bot.onText(/\/addadmin (\d+)/, (msg, match) => {
   bot.sendMessage(msg.chat.id, `✅ Admin Added: \`${newAdminId}\``, { parse_mode: 'Markdown' });
 });
 
-// ২. নির্দিষ্ট এডমিন রিমুভ করা (যেমন: /removeadmin 12345678)
 bot.onText(/\/removeadmin (\d+)/, (msg, match) => {
   if (msg.from.id !== OWNER_ID) return;
   const targetAdminId = parseInt(match[1]);
@@ -105,7 +104,6 @@ bot.onText(/\/removeadmin (\d+)/, (msg, match) => {
   bot.sendMessage(msg.chat.id, `🗑️ Admin Removed: \`${targetAdminId}\``, { parse_mode: 'Markdown' });
 });
 
-// ৩. বর্তমান সকল এডমিনের তালিকা দেখা
 bot.onText(/\/admins/, (msg) => {
   if (msg.from.id !== OWNER_ID) return;
   if (admins.length === 0) {
@@ -120,14 +118,12 @@ bot.onText(/\/admins/, (msg) => {
   bot.sendMessage(msg.chat.id, listText, { parse_mode: 'Markdown' });
 });
 
-// ৪. এক ক্লিকে সকল এডমিন ডিলিট করা
 bot.onText(/\/clearadmins/, (msg) => {
   if (msg.from.id !== OWNER_ID) return;
   admins = [];
   bot.sendMessage(msg.chat.id, "🧹 সকল অতিরিক্ত এডমিন সফলভাবে রিমুভ করা হয়েছে।");
 });
 
-// ৫. জিমেইল রেট সেট করা
 bot.onText(/\/setrate (old|new) (\d+)/, (msg, match) => {
   const userId = msg.from.id;
   if (userId !== OWNER_ID && !admins.includes(userId)) {
@@ -171,7 +167,6 @@ bot.on('callback_query', async (query) => {
     });
   }
 
-  // Old Gmail - 2FA Selection Step
   if (data === "select_old_2fa_status") {
     bot.sendMessage(chatId, "🔐 আপনার **Old Gmail** একাউন্টে কি 2-Step Verification (2FA) অন আছে?", {
       parse_mode: 'Markdown',
@@ -185,7 +180,6 @@ bot.on('callback_query', async (query) => {
     });
   }
 
-  // Processing 2FA ON or OFF selection
   if (data === "submit_old_2fa_on" || data === "submit_old_2fa_off" || data === "submit_new") {
     let type = "new";
     let is2FA = false;
@@ -201,7 +195,7 @@ bot.on('callback_query', async (query) => {
     const currentRate = rates[type];
     userState[chatId] = { action: 'submitting_gmail', type: type, is2FA: is2FA };
 
-    let promptMessage = `📧 **${type.toUpperCase()} Gmail Submitting**\n💰 বর্তমান রেট: ${currentRate} টাকা\n⚠️ **রুলস:** জিমেইল পাসওয়ার্ড এইটা দেওয়ার চেষ্টা করবেন aass1122\n\nজিমেইল চেক করার জন্য ২৪ ঘণ্টা সময় লাগবে।\nজিমেইল সাবমিট দেওয়ার আগে অবশ্যই ফোন থেকে রিমুভ করে দেবেন।\n\n`;
+    let promptMessage = `📧 **${type.toUpperCase()} Gmail Submitting**\n💰 বর্তমান রেট: ${currentRate} টাকা\n⚠️ **রুলস:** জিমেইল পাসওয়ার্ড এইটা দেওয়ার চেষ্টা করবেন \`aass1122\`\n\nজিমেইল চেক করার জন্য ২৪ ঘণ্টা সময় লাগবে।\nজিমেইল সাবমিট দেওয়ার আগে অবশ্যই ফোন থেকে রিমুভ করে দেবেন।\n\n`;
 
     if (is2FA) {
       promptMessage += `🔑 **2FA ON সিলেক্ট করেছেন।**\nনিচের ফরম্যাটে জিমেইল, পাসওয়ার্ড এবং ৮ ডিজিটের প্রেস কি (Backup Codes) লিখে পাঠান:\n\n` +
@@ -214,7 +208,15 @@ bot.on('callback_query', async (query) => {
     bot.sendMessage(chatId, promptMessage, { parse_mode: 'Markdown' });
   }
 
+  // Withdraw Menu Checking
   if (data === "withdraw_menu") {
+    const currentBal = userBalances[chatId] || 0;
+
+    // ৫০ টাকার কম থাকলে মেসেজ দেখিয়ে দেওয়া হবে
+    if (currentBal < MIN_WITHDRAW) {
+      return bot.sendMessage(chatId, `❌ **পর্যাপ্ত ব্যালেন্স নেই!**\n\n💰 আপনার বর্তমান ব্যালেন্স: **${currentBal} টাকা**\n⚠️ উইথড্র করতে সর্বনিম্ন **${MIN_WITHDRAW} টাকা** ব্যালেন্স থাকতে হবে।`, { parse_mode: 'Markdown' });
+    }
+
     bot.sendMessage(chatId, "পেমেন্ট পাওয়ার জন্য মাধ্যম সিলেক্ট করুন:", {
       reply_markup: {
         inline_keyboard: [
@@ -227,9 +229,15 @@ bot.on('callback_query', async (query) => {
   }
 
   if (data === "withdraw_bkash" || data === "withdraw_nagad") {
+    const currentBal = userBalances[chatId] || 0;
+
+    if (currentBal < MIN_WITHDRAW) {
+      return bot.sendMessage(chatId, `❌ আপনার একাউন্টে পর্যাপ্ত ব্যালেন্স নেই। উইথড্র করতে সর্বনিম্ন **${MIN_WITHDRAW} টাকা** প্রয়োজন।`, { parse_mode: 'Markdown' });
+    }
+
     const method = data === "withdraw_bkash" ? "Bkash" : "Nagad";
     userState[chatId] = { action: 'withdrawing', method: method };
-    bot.sendMessage(chatId, `📲 **${method} Withdraw**\n\nআপনার ${method} নম্বর এবং টাকার পরিমাণ লিখে পাঠান (যেমন: \`01700000000 - 500 Tk\`):`, { parse_mode: 'Markdown' });
+    bot.sendMessage(chatId, `📲 **${method} Withdraw**\n💰 আপনার বর্তমান ব্যালেন্স: **${currentBal} টাকা**\n\nপেমেন্ট নেওয়ার জন্য আপনার **${method} নম্বর** লিখে পাঠান:`, { parse_mode: 'Markdown' });
   }
 
   if (data === "main_menu") {
@@ -237,7 +245,6 @@ bot.on('callback_query', async (query) => {
     sendMainMenu(chatId);
   }
 
-  // Admin Approve / Reject Actions
   if (data.startsWith("app_") || data.startsWith("rej_")) {
     const action = data.split("_")[0];
     const type = data.split("_")[1];
@@ -312,14 +319,24 @@ bot.on('message', (msg) => {
   // Withdraw Requests Handling
   if (state.action === 'withdrawing') {
     const currentBal = userBalances[chatId] || 0;
-    bot.sendMessage(chatId, "✅ আপনার উইথড্র রিকোয়েস্ট এডমিনের কাছে পাঠানো হয়েছে। খুব শীঘ্রই পেমেন্ট করা হবে।");
+
+    // আবার চেক করা হচ্ছে ব্যালেন্স ৫০ টাকার কম আছে কিনা
+    if (currentBal < MIN_WITHDRAW) {
+      delete userState[chatId];
+      return bot.sendMessage(chatId, `❌ **পর্যাপ্ত ব্যালেন্স নেই!** উইথড্র করতে সর্বনিম্ন **${MIN_WITHDRAW} টাকা** প্রয়োজন।`);
+    }
+
+    const withdrawAmount = currentBal; // কারেন্ট পুরো ব্যালেন্স কেটে নেওয়া হবে
+    userBalances[chatId] = 0; // ওয়ালেট ব্যালেন্স জিরো করা হলো
+
+    bot.sendMessage(chatId, `✅ আপনার **${withdrawAmount} টাকার** উইথড্র রিকোয়েস্ট সফলভাবে এডমিনের কাছে পাঠানো হয়েছে!`);
 
     const adminMsg = `💳 **নতুন উইথড্র রিকোয়েস্ট!**\n\n` +
                      `👤 ইউজার: ${msg.from.first_name} (@${msg.from.username || 'N/A'})\n` +
                      `🆔 ইউজার ID: \`${chatId}\`\n` +
-                     `💰 বর্তমান একাউন্ট ব্যালেন্স: ${currentBal} টাকা\n` +
-                     `মেথড: ${state.method}\n` +
-                     `ইউজার ইনপুট: \`${text}\``;
+                     `💵 উইথড্র পরিমাণ: **${withdrawAmount} টাকা**\n` +
+                     `📌 মেথড: ${state.method}\n` +
+                     `📱 নম্বর: \`${text}\``;
 
     notifyAdminsWithMarkup(adminMsg, null);
     delete userState[chatId];

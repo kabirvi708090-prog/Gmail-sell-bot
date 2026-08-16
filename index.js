@@ -79,17 +79,55 @@ bot.onText(/\/start/, async (msg) => {
   sendMainMenu(chatId);
 });
 
-// Admin Control Commands
+// ==================== ADMIN MANAGEMENT COMMANDS ====================
+
+// ১. নতুন এডমিন যুক্ত করা (সর্বোচ্চ ২ জন)
 bot.onText(/\/addadmin (\d+)/, (msg, match) => {
   if (msg.from.id !== OWNER_ID) return;
   const newAdminId = parseInt(match[1]);
-  if (admins.length >= 2) return bot.sendMessage(msg.chat.id, "❌ সর্বোচ্চ ২ জন এডমিন যোগ করতে পারবেন।");
-  if (!admins.includes(newAdminId)) {
-    admins.push(newAdminId);
-    bot.sendMessage(msg.chat.id, `✅ Admin Added: ${newAdminId}`);
-  }
+  if (admins.length >= 2) return bot.sendMessage(msg.chat.id, "❌ সর্বোচ্চ ২ জন এডমিন যোগ করতে পারবেন। আগের এডমিন রিমুভ করুন।");
+  if (admins.includes(newAdminId)) return bot.sendMessage(msg.chat.id, "⚠️ এই আইডি অলরেডি এডমিন লিস্টে আছে।");
+
+  admins.push(newAdminId);
+  bot.sendMessage(msg.chat.id, `✅ Admin Added: \`${newAdminId}\``, { parse_mode: 'Markdown' });
 });
 
+// ২. নির্দিষ্ট এডমিন রিমুভ করা (যেমন: /removeadmin 12345678)
+bot.onText(/\/removeadmin (\d+)/, (msg, match) => {
+  if (msg.from.id !== OWNER_ID) return;
+  const targetAdminId = parseInt(match[1]);
+
+  if (!admins.includes(targetAdminId)) {
+    return bot.sendMessage(msg.chat.id, "❌ এই আইডিটি এডমিন লিস্টে পাওয়া যায়নি।");
+  }
+
+  admins = admins.filter(id => id !== targetAdminId);
+  bot.sendMessage(msg.chat.id, `🗑️ Admin Removed: \`${targetAdminId}\``, { parse_mode: 'Markdown' });
+});
+
+// ৩. বর্তমান সকল এডমিনের তালিকা দেখা
+bot.onText(/\/admins/, (msg) => {
+  if (msg.from.id !== OWNER_ID) return;
+  if (admins.length === 0) {
+    return bot.sendMessage(msg.chat.id, "ℹ️ বর্তমানে কোনো অতিরিক্ত এডমিন নেই।");
+  }
+
+  let listText = "👑 **বর্তমান এডমিন তালিকা:**\n\n";
+  admins.forEach((id, index) => {
+    listText += `${index + 1}. \`${id}\`\n`;
+  });
+
+  bot.sendMessage(msg.chat.id, listText, { parse_mode: 'Markdown' });
+});
+
+// ৪. এক ক্লিকে সকল এডমিন ডিলিট করা
+bot.onText(/\/clearadmins/, (msg) => {
+  if (msg.from.id !== OWNER_ID) return;
+  admins = [];
+  bot.sendMessage(msg.chat.id, "🧹 সকল অতিরিক্ত এডমিন সফলভাবে রিমুভ করা হয়েছে।");
+});
+
+// ৫. জিমেইল রেট সেট করা
 bot.onText(/\/setrate (old|new) (\d+)/, (msg, match) => {
   const userId = msg.from.id;
   if (userId !== OWNER_ID && !admins.includes(userId)) {
@@ -98,6 +136,8 @@ bot.onText(/\/setrate (old|new) (\d+)/, (msg, match) => {
   rates[match[1]] = parseInt(match[2]);
   bot.sendMessage(msg.chat.id, `✅ ${match[1].toUpperCase()} Gmail-এর নতুন রেট: ${match[2]} টাকা`);
 });
+
+// ===================================================================
 
 // Inline Callbacks
 bot.on('callback_query', async (query) => {
@@ -233,7 +273,6 @@ bot.on('message', (msg) => {
   if (state.action === 'submitting_gmail') {
     bot.sendMessage(chatId, "✅ আপনার জিমেইল সফলভাবে জমা হয়েছে! এডমিন চেক করে ২৪ ঘণ্টার মধ্যে আপডেট দেবে।");
 
-    // জিমেইল, পাসওয়ার্ড, ব্যাকআপ কোড আলাদা করে ট্যাপ-টু-কপি ফরম্যাটে সাজানো
     const parts = text.trim().split(/\s+/);
     let formattedData = "";
 

@@ -54,6 +54,7 @@ function sendMainMenu(chatId) {
       inline_keyboard: [
         [{ text: "📧 Gmail Account Sell", callback_data: "sell_menu" }],
         [{ text: `💰 Balance: ${balance} Tk`, callback_data: "my_balance" }, { text: "💳 Withdraw", callback_data: "withdraw_menu" }],
+        [{ text: "📢 Important Notice", callback_data: "important_notice" }],
         [{ text: "👨‍💻 Admin Support", url: "https://t.me/skfreetaka" }]
       ]
     }
@@ -155,6 +156,23 @@ bot.on('callback_query', async (query) => {
     bot.answerCallbackQuery(query.id, { text: `💳 আপনার বর্তমান ব্যালেন্স: ${balance} টাকা`, show_alert: true });
   }
 
+  if (data === "important_notice") {
+    const noticeText = "📢 **Important Notice**\n\n" +
+                       "⚠️ **বাধ্যতামূলক:** জিমেইল একাউন্ট খুলতে অবশ্যই নিচের যেকোনো একটি পাসওয়ার্ড ব্যবহার করতে হবে:\n\n" +
+                       "1. `aass1122`\n" +
+                       "2. `sgsg1122`\n\n" +
+                       "অন্য কোনো পাসওয়ার্ড ব্যবহার করলে একাউন্ট গ্রহণযোগ্য নাও হতে পারে।";
+    
+    bot.sendMessage(chatId, noticeText, {
+      parse_mode: 'Markdown',
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: "🔙 Back", callback_data: "main_menu" }]
+        ]
+      }
+    });
+  }
+
   if (data === "sell_menu") {
     bot.sendMessage(chatId, "কোন ধরণের জিমেইল বিক্রি করতে চান সিলেক্ট করুন:", {
       reply_markup: {
@@ -174,7 +192,7 @@ bot.on('callback_query', async (query) => {
         inline_keyboard: [
           [{ text: "🔒 2FA ON (2-Step Verification)", callback_data: "submit_old_2fa_on" }],
           [{ text: "🔓 2FA OFF (Normal)", callback_data: "submit_old_2fa_off" }],
-          [{ text: "🔙 Back", callback_data: "sell_menu" }]
+          [{ text: "🔙 Back", callback_data: "sell_menu" }, { text: "🏠 Main Menu", callback_data: "main_menu" }]
         ]
       }
     });
@@ -195,7 +213,7 @@ bot.on('callback_query', async (query) => {
     const currentRate = rates[type];
     userState[chatId] = { action: 'submitting_gmail', type: type, is2FA: is2FA };
 
-    let promptMessage = `📧 **${type.toUpperCase()} Gmail Submitting**\n💰 বর্তমান রেট: ${currentRate} টাকা\n⚠️ **রুলস:** জিমেইল পাসওয়ার্ড এইটা দেওয়ার চেষ্টা করবেন \`aass1122\`\n\nজিমেইল চেক করার জন্য ২৪ ঘণ্টা সময় লাগবে।\nজিমেইল সাবমিট দেওয়ার আগে অবশ্যই ফোন থেকে রিমুভ করে দেবেন।\n\n`;
+    let promptMessage = `📧 **${type.toUpperCase()} Gmail Submitting**\n💰 বর্তমান রেট: ${currentRate} টাকা\n⚠️ **রুলস:** জিমেইল পাসওয়ার্ড অবশ্যই \`aass1122\` অথবা \`sgsg1122\` ব্যবহার করতে হবে।\n\nজিমেইল চেক করার জন্য ২৪ ঘণ্টা সময় লাগবে।\nজিমেইল সাবমিট দেওয়ার আগে অবশ্যই ফোন থেকে রিমুভ করে দেবেন।\n\n`;
 
     if (is2FA) {
       promptMessage += `🔑 **2FA ON সিলেক্ট করেছেন।**\nনিচের ফরম্যাটে জিমেইল, পাসওয়ার্ড এবং ৮ ডিজিটের প্রেস কি (Backup Codes) লিখে পাঠান:\n\n` +
@@ -205,7 +223,14 @@ bot.on('callback_query', async (query) => {
                         `\`email@gmail.com pass123\``;
     }
 
-    bot.sendMessage(chatId, promptMessage, { parse_mode: 'Markdown' });
+    bot.sendMessage(chatId, promptMessage, { 
+      parse_mode: 'Markdown',
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: "🔙 Back", callback_data: "sell_menu" }, { text: "🏠 Main Menu", callback_data: "main_menu" }]
+        ]
+      }
+    });
   }
 
   // Withdraw Menu Checking
@@ -214,7 +239,14 @@ bot.on('callback_query', async (query) => {
 
     // ৫০ টাকার কম থাকলে মেসেজ দেখিয়ে দেওয়া হবে
     if (currentBal < MIN_WITHDRAW) {
-      return bot.sendMessage(chatId, `❌ **পর্যাপ্ত ব্যালেন্স নেই!**\n\n💰 আপনার বর্তমান ব্যালেন্স: **${currentBal} টাকা**\n⚠️ উইথড্র করতে সর্বনিম্ন **${MIN_WITHDRAW} টাকা** ব্যালেন্স থাকতে হবে।`, { parse_mode: 'Markdown' });
+      return bot.sendMessage(chatId, `❌ **পর্যাপ্ত ব্যালেন্স নেই!**\n\n💰 আপনার বর্তমান ব্যালেন্স: **${currentBal} টাকা**\n⚠️ উইথড্র করতে সর্বনিম্ন **${MIN_WITHDRAW} টাকা** ব্যালেন্স থাকতে হবে।`, { 
+        parse_mode: 'Markdown',
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "🔙 Back", callback_data: "main_menu" }]
+          ]
+        }
+      });
     }
 
     bot.sendMessage(chatId, "পেমেন্ট পাওয়ার জন্য মাধ্যম সিলেক্ট করুন:", {
@@ -232,12 +264,26 @@ bot.on('callback_query', async (query) => {
     const currentBal = userBalances[chatId] || 0;
 
     if (currentBal < MIN_WITHDRAW) {
-      return bot.sendMessage(chatId, `❌ আপনার একাউন্টে পর্যাপ্ত ব্যালেন্স নেই। উইথড্র করতে সর্বনিম্ন **${MIN_WITHDRAW} টাকা** প্রয়োজন।`, { parse_mode: 'Markdown' });
+      return bot.sendMessage(chatId, `❌ আপনার একাউন্টে পর্যাপ্ত ব্যালেন্স নেই। উইথড্র করতে সর্বনিম্ন **${MIN_WITHDRAW} টাকা** প্রয়োজন।`, { 
+        parse_mode: 'Markdown',
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "🔙 Back", callback_data: "withdraw_menu" }]
+          ]
+        }
+      });
     }
 
     const method = data === "withdraw_bkash" ? "Bkash" : "Nagad";
     userState[chatId] = { action: 'withdrawing', method: method };
-    bot.sendMessage(chatId, `📲 **${method} Withdraw**\n💰 আপনার বর্তমান ব্যালেন্স: **${currentBal} টাকা**\n\nপেমেন্ট নেওয়ার জন্য আপনার **${method} নম্বর** লিখে পাঠান:`, { parse_mode: 'Markdown' });
+    bot.sendMessage(chatId, `📲 **${method} Withdraw**\n💰 আপনার বর্তমান ব্যালেন্স: **${currentBal} টাকা**\n\nপেমেন্ট নেওয়ার জন্য আপনার **${method} নম্বর** লিখে পাঠান:`, { 
+      parse_mode: 'Markdown',
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: "🔙 Back", callback_data: "withdraw_menu" }, { text: "🏠 Main Menu", callback_data: "main_menu" }]
+        ]
+      }
+    });
   }
 
   if (data === "main_menu") {
@@ -278,7 +324,13 @@ bot.on('message', (msg) => {
 
   // Gmail Submissions Handling
   if (state.action === 'submitting_gmail') {
-    bot.sendMessage(chatId, "✅ আপনার জিমেইল সফলভাবে জমা হয়েছে! এডমিন চেক করে ২৪ ঘণ্টার মধ্যে আপডেট দেবে।");
+    bot.sendMessage(chatId, "✅ আপনার জিমেইল সফলভাবে জমা হয়েছে! এডমিন চেক করে ২৪ ঘণ্টার মধ্যে আপডেট দেবে।", {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: "🏠 Main Menu", callback_data: "main_menu" }]
+        ]
+      }
+    });
 
     const parts = text.trim().split(/\s+/);
     let formattedData = "";
@@ -323,13 +375,25 @@ bot.on('message', (msg) => {
     // আবার চেক করা হচ্ছে ব্যালেন্স ৫০ টাকার কম আছে কিনা
     if (currentBal < MIN_WITHDRAW) {
       delete userState[chatId];
-      return bot.sendMessage(chatId, `❌ **পর্যাপ্ত ব্যালেন্স নেই!** উইথড্র করতে সর্বনিম্ন **${MIN_WITHDRAW} টাকা** প্রয়োজন।`);
+      return bot.sendMessage(chatId, `❌ **পর্যাপ্ত ব্যালেন্স নেই!** উইথড্র করতে সর্বনিম্ন **${MIN_WITHDRAW} টাকা** প্রয়োজন।`, {
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "🏠 Main Menu", callback_data: "main_menu" }]
+          ]
+        }
+      });
     }
 
     const withdrawAmount = currentBal; // কারেন্ট পুরো ব্যালেন্স কেটে নেওয়া হবে
     userBalances[chatId] = 0; // ওয়ালেট ব্যালেন্স জিরো করা হলো
 
-    bot.sendMessage(chatId, `✅ আপনার **${withdrawAmount} টাকার** উইথড্র রিকোয়েস্ট সফলভাবে এডমিনের কাছে পাঠানো হয়েছে!`);
+    bot.sendMessage(chatId, `✅ আপনার **${withdrawAmount} টাকার** উইথড্র রিকোয়েস্ট সফলভাবে এডমিনের কাছে পাঠানো হয়েছে!`, {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: "🏠 Main Menu", callback_data: "main_menu" }]
+        ]
+      }
+    });
 
     const adminMsg = `💳 **নতুন উইথড্র রিকোয়েস্ট!**\n\n` +
                      `👤 ইউজার: ${msg.from.first_name} (@${msg.from.username || 'N/A'})\n` +
